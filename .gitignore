@@ -1,0 +1,11 @@
+# python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# VSCode
+.vscode/
+
+# Streamlit secret files (중요)
+.streamlit/secrets.toml
+.env
