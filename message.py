@@ -6,9 +6,6 @@ import os
 
 # ✅ OpenAI API 키 설정
 openai.api_key = os.getenv("OPENAI_API_KEY")
-if not openai.api_key:
-    st.error("❌ OpenAI API 키가 설정되지 않았습니다. .env 파일에 OPENAI_API_KEY를 설정해주세요.")
-    st.stop()
 
 # 데이터 로드
 df = pd.read_excel("태그_날짜_날씨_추가된_메시지.xlsx", sheet_name="전체")
@@ -88,7 +85,20 @@ if st.button("🔍 메시지 추천받기"):
         df["유형"].fillna("") == selected_type
     ]
 
-    if not filtered.empty:
+
+
+    # fallback: 태그만 일치하는 메시지로 대체 추천
+    if filtered.empty:
+        fallback = df[df["태그"].apply(has_tag)]
+        if not fallback.empty:
+            base_msg = fallback.sample(1).iloc[0]["메시지"]
+            gpt_msg = generate_gpt_message(base_msg, selected_tags, selected_tone, selected_type, selected_weather, selected_holiday)
+
+            st.info("📌 조건과 정확히 일치하지는 않지만, 유사한 메시지를 추천드립니다:")
+            st.success(gpt_msg)
+        else:
+            st.warning("조건에 맞는 메시지가 없습니다. 태그와 유형을 다시 선택해주세요.")
+    else:
         base_msg = filtered.sample(1).iloc[0]["메시지"]
         gpt_msg = generate_gpt_message(base_msg, selected_tags, selected_tone, selected_type, selected_weather, selected_holiday)
 
@@ -97,5 +107,3 @@ if st.button("🔍 메시지 추천받기"):
 
         st.success("✨ 변형된 추천 메시지:")
         st.write(gpt_msg)
-    else:
-        st.warning("조건에 맞는 메시지가 없습니다. 태그와 유형을 다시 선택해주세요.")
