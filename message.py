@@ -1,11 +1,6 @@
 import streamlit as st
 import pandas as pd
 import random
-from openai import OpenAI
-import os
-
-# ✅ OpenAI API 연결
-client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 # 데이터 로드
 df = pd.read_excel("태그_날짜_날씨_추가된_메시지.xlsx", sheet_name="전체")
@@ -17,7 +12,7 @@ type_options = df['유형'].dropna().unique().tolist()
 weather_options = ["맑음", "비", "눈", "폭우", "폭설", "폭염"]
 holiday_options = ["평일", "주말", "공휴일", "설날", "추석"]
 
-st.title("🧠 GPT 기반 자동 메시지 생성기")
+st.title("🧠 메시지 자동 추천기 (GPT 비활성화)")
 
 # 사용자 입력
 selected_tags = st.multiselect("강조할 태그를 선택하세요", tag_options)
@@ -43,34 +38,20 @@ def get_holiday_phrase(holiday):
         "주말": "주말에도 평소처럼 안전운전을 부탁드립니다.",
     }.get(holiday, "")
 
-# 메시지 생성 함수 (GPT 기반)
-def generate_gpt_message(base_msg, tags, tone, msg_type, weather, holiday):
+# 메시지 생성 함수 (GPT 없이 단순 보정)
+def generate_simple_message(base_msg, tags, tone, msg_type, weather, holiday):
     tag_text = ", ".join(tags)
     weather_phrase = get_weather_phrase(weather)
     holiday_phrase = get_holiday_phrase(holiday)
 
-    prompt = (
-        f"다음은 '{msg_type}' 대상 운전기사에게 보내는 공지 메시지입니다. 메시지를 '{tone}' 톤으로 반드시 '존댓말'로 다시 써주세요.\n"
-        f"다음 태그를 강조해주세요: {tag_text}.\n"
-        f"메시지는 '{weather}' 날씨이며 '{holiday}'입니다. 다음 문장을 자연스럽게 반영해주세요:\n"
-        f"- 날씨 문구: {weather_phrase}\n"
-        f"- 날짜 문구: {holiday_phrase}\n"
-        f"\n[기존 메시지]\n{base_msg}\n"
-        f"\n[변환된 메시지]"
+    return (
+        f"[{msg_type}] {tone} 메시지\n"
+        f"강조 태그: {tag_text}\n"
+        f"날씨: {weather} - {weather_phrase}\n"
+        f"날짜: {holiday} - {holiday_phrase}\n"
+        f"\n기존 메시지: {base_msg}\n"
+        f"\n✏️ 위 내용을 참고하여 메시지를 응용해주세요."
     )
-
-    try:
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.7,
-            max_tokens=200
-        )
-        return response.choices[0].message.content.strip()
-    except Exception as e:
-        if 'quota' in str(e).lower():
-            return "❌ 현재 API 키의 사용 한도를 초과했습니다. 다른 키를 사용하거나 한도를 확인하세요."
-        return f"⚠️ GPT 호출 실패: {e}"
 
 # 추천 버튼
 if st.button("🔍 메시지 추천받기"):
@@ -91,7 +72,7 @@ if st.button("🔍 메시지 추천받기"):
         fallback = df[df["태그"].apply(has_tag)]
         if not fallback.empty:
             base_msg = fallback.sample(1).iloc[0]["메시지"]
-            msg = generate_gpt_message(base_msg, selected_tags, selected_tone, selected_type, selected_weather, selected_holiday)
+            msg = generate_simple_message(base_msg, selected_tags, selected_tone, selected_type, selected_weather, selected_holiday)
 
             st.info("📌 조건과 정확히 일치하지는 않지만, 유사한 메시지를 추천드립니다:")
             st.success(msg)
@@ -99,7 +80,7 @@ if st.button("🔍 메시지 추천받기"):
             st.warning("조건에 맞는 메시지가 없습니다. 태그와 유형을 다시 선택해주세요.")
     else:
         base_msg = filtered.sample(1).iloc[0]["메시지"]
-        msg = generate_gpt_message(base_msg, selected_tags, selected_tone, selected_type, selected_weather, selected_holiday)
+        msg = generate_simple_message(base_msg, selected_tags, selected_tone, selected_type, selected_weather, selected_holiday)
 
         st.info("📝 기존 메시지:")
         st.write(base_msg)
