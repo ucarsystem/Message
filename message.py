@@ -4,7 +4,7 @@ import random
 from openai import OpenAI
 import os
 
-# ✅ OpenAI API 키 설정
+# ✅ OpenAI API 연결
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 # 데이터 로드
@@ -43,7 +43,7 @@ def get_holiday_phrase(holiday):
         "주말": "주말에도 평소처럼 안전운전을 부탁드립니다.",
     }.get(holiday, "")
 
-# 메시지 생성 함수 (GPT 활용)
+# 메시지 생성 함수 (GPT 기반)
 def generate_gpt_message(base_msg, tags, tone, msg_type, weather, holiday):
     tag_text = ", ".join(tags)
     weather_phrase = get_weather_phrase(weather)
@@ -68,11 +68,12 @@ def generate_gpt_message(base_msg, tags, tone, msg_type, weather, holiday):
         )
         return response.choices[0].message.content.strip()
     except Exception as e:
+        if 'quota' in str(e).lower():
+            return "❌ 현재 API 키의 사용 한도를 초과했습니다. 다른 키를 사용하거나 한도를 확인하세요."
         return f"⚠️ GPT 호출 실패: {e}"
 
 # 추천 버튼
 if st.button("🔍 메시지 추천받기"):
-    # 태그 + 유형 필터링
     def has_tag(tag_list):
         try:
             tags = eval(tag_list)
@@ -85,25 +86,23 @@ if st.button("🔍 메시지 추천받기"):
         df["유형"].fillna("") == selected_type
     ]
 
-
-
     # fallback: 태그만 일치하는 메시지로 대체 추천
     if filtered.empty:
         fallback = df[df["태그"].apply(has_tag)]
         if not fallback.empty:
             base_msg = fallback.sample(1).iloc[0]["메시지"]
-            gpt_msg = generate_gpt_message(base_msg, selected_tags, selected_tone, selected_type, selected_weather, selected_holiday)
+            msg = generate_gpt_message(base_msg, selected_tags, selected_tone, selected_type, selected_weather, selected_holiday)
 
             st.info("📌 조건과 정확히 일치하지는 않지만, 유사한 메시지를 추천드립니다:")
-            st.success(gpt_msg)
+            st.success(msg)
         else:
             st.warning("조건에 맞는 메시지가 없습니다. 태그와 유형을 다시 선택해주세요.")
     else:
         base_msg = filtered.sample(1).iloc[0]["메시지"]
-        gpt_msg = generate_gpt_message(base_msg, selected_tags, selected_tone, selected_type, selected_weather, selected_holiday)
+        msg = generate_gpt_message(base_msg, selected_tags, selected_tone, selected_type, selected_weather, selected_holiday)
 
         st.info("📝 기존 메시지:")
         st.write(base_msg)
 
-        st.success("✨ 변형된 추천 메시지:")
-        st.write(gpt_msg)
+        st.success("✨ 추천 메시지:")
+        st.write(msg)
