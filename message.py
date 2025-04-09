@@ -1,11 +1,11 @@
 import streamlit as st
 import pandas as pd
 import random
-import openai
+from openai import OpenAI
 import os
 
 # ✅ OpenAI API 키 설정
-openai.api_key = os.getenv("OPENAI_API_KEY")
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 # 데이터 로드
 df = pd.read_excel("태그_날짜_날씨_추가된_메시지.xlsx", sheet_name="전체")
@@ -60,7 +60,7 @@ def generate_gpt_message(base_msg, tags, tone, msg_type, weather, holiday):
     )
 
     try:
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.7,
