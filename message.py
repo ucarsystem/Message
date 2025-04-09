@@ -71,19 +71,16 @@ if st.button("🔍 메시지 추천받기"):
     if filtered.empty:
         fallback = df[df["태그"].apply(has_tag)]
         if not fallback.empty:
-            base_msg = fallback.sample(1).iloc[0]["메시지"]
-            msg = generate_simple_message(base_msg, selected_tags, selected_tone, selected_type, selected_weather, selected_holiday)
-
-            st.info("📌 조건과 정확히 일치하지는 않지만, 유사한 메시지를 추천드립니다:")
-            st.success(msg)
+            st.info("📌 조건과 정확히 일치하지는 않지만, 유사한 메시지를 최대 5개 추천드립니다:")
+            samples = fallback.sample(min(5, len(fallback)))
+            for i, row in samples.iterrows():
+                msg = generate_simple_message(row["메시지"], selected_tags, selected_tone, selected_type, selected_weather, selected_holiday)
+                st.success(msg)
         else:
             st.warning("조건에 맞는 메시지가 없습니다. 태그와 유형을 다시 선택해주세요.")
     else:
-        base_msg = filtered.sample(1).iloc[0]["메시지"]
-        msg = generate_simple_message(base_msg, selected_tags, selected_tone, selected_type, selected_weather, selected_holiday)
-
-        st.info("📝 기존 메시지:")
-        st.write(base_msg)
-
-        st.success("✨ 추천 메시지:")
-        st.write(msg)
+        st.info("✨ 조건에 맞는 메시지를 최대 5개 추천드립니다:")
+        samples = filtered.sample(min(5, len(filtered)))
+        for i, row in samples.iterrows():
+            msg = generate_simple_message(row["메시지"], selected_tags, selected_tone, selected_type, selected_weather, selected_holiday)
+            st.success(msg)
